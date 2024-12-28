@@ -5,9 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Entities
+namespace Domain.Entities.Authentication
 {
-    public class User : IdentityUser
+    public class ApplicationUser : IdentityUser
     {
+        public string? Name { get; set; }
     }
 }
