@@ -7,5 +7,4 @@ using System.Threading.Tasks;
 namespace Application.DTOs.Request.Account
 {
     public record UpdateRoleDTO(string UserEmail, string RoleName);
-
 }
