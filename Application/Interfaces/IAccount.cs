@@ -17,6 +17,8 @@ namespace Application.Interfaces
 
         Task<LoginResponse> LoginAcoountAsync(LoginDto model);
 
+        Task<LoginResponse> RefreshTokenAsync(RefreshTokenDTO model);
+
         Task<GeneralResponse> CreateRoleAsync(CreateRoleDTO model);
 
         Task<IEnumerable<GetRoleDTO>> GetRoleAsync();

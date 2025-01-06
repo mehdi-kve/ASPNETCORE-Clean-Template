@@ -13,13 +13,15 @@ using System.Security.Cryptography;
 using System.Text;
 using Mapster;
 using Application.Extensions;
+using Infrastructure.DataContext;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repos
 {
     public class AccountRepository
         (RoleManager<IdentityRole> roleManager,
          UserManager<ApplicationUser> userManager,IConfiguration config,
-         SignInManager<ApplicationUser> signInManager) : IAccount
+         SignInManager<ApplicationUser> signInManager, ApplicationDbContext context) : IAccount
     {
         private async Task<ApplicationUser> FindUserByEmailAsync(string email)
             => await userManager.FindByEmailAsync(email);
@@ -179,14 +181,47 @@ namespace Infrastructure.Repos
                 string refreshToken = GenerateRefreshToken();
                 if (string.IsNullOrEmpty(jwtToken) || string.IsNullOrEmpty(refreshToken))
                     return new LoginResponse(false, "Error occured while logging in account, please contact administration");
-                else
-                    return new LoginResponse(true, $"{user.Name} successfully logged in", jwtToken, refreshToken);
+                else 
+                {
+
+                    var saveResult = await SaveRefreshToken(user.Id, refreshToken);
+                    if (saveResult.Flag)
+                        return new LoginResponse(true, $"{user.Name} successfully logged in", jwtToken, refreshToken);
+                    else
+                        return new LoginResponse();
+                }
             }
             catch(Exception ex) 
+
             {
                 return new LoginResponse(false, ex.Message);
             }
         }
 
+        public async Task<LoginResponse> RefreshTokenAsync(RefreshTokenDTO model)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<GeneralResponse> SaveRefreshToken(string userId, string token)
+        {
+
+            try 
+            {
+                var user = await context.RefreshTokens.FirstOrDefaultAsync(t => t.UserID == userId);
+                if (user == null)
+                    context.RefreshTokens.Add(new RefreshToken() { UserID = userId, Token = token });
+                else 
+                    user.Token = token;
+
+                await context.SaveChangesAsync();
+                return new GeneralResponse(true, null!);
+            }
+            catch(Exception ex) 
+            {
+                return new GeneralResponse(false, ex.Message);
+            }
+
+        }
     }
 }
