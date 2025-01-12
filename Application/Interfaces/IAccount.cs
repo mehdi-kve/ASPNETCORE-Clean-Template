@@ -25,6 +25,6 @@ namespace Application.Interfaces
 
         Task<IEnumerable<GetUserWithRolesDTO>> GetUserWithRoleAsync();
 
-        Task<GeneralResponse> ChangeRoleAsync();
+        Task<GeneralResponse> ChangeUserRoleAsync(ChangeUserRoleRequestDTO model);
     }
 }

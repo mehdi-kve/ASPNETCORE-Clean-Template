@@ -29,6 +29,9 @@ namespace Infrastructure.Repos
         private async Task<IdentityRole> FindRoleByNameAsync(string roleName)
             => await roleManager.FindByNameAsync(roleName);
 
+        public async Task<IEnumerable<GetRoleDTO>> GetRoleAsync()
+            => (await roleManager.Roles.ToListAsync()).Adapt<IEnumerable<GetRoleDTO>>();
+
         private static string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
         public async Task<string> GenerateToken(ApplicationUser user)
@@ -136,24 +139,43 @@ namespace Infrastructure.Repos
             }
         }
 
-        public Task<GeneralResponse> CreateRoleAsync(CreateRoleDTO model)
+        public async Task<GeneralResponse> CreateRoleAsync(CreateRoleDTO model)
         {
-            throw new NotImplementedException();
+            var existingRole = await roleManager.FindByNameAsync(model.RoleName);
+            if (existingRole != null)
+                return new GeneralResponse(false, "Role already exists");
+
+            var newRole = new IdentityRole { Name = model.RoleName };
+            var result = await roleManager.CreateAsync(newRole);
+            var response = CheckResponse(result);
+
+            if (!string.IsNullOrEmpty(response))
+                return new GeneralResponse(false, response);
+            else
+                return new GeneralResponse(true, "Role Changed");
+
         }
 
-        public Task<GeneralResponse> ChangeRoleAsync()
+        public async Task<IEnumerable<GetUserWithRolesDTO>> GetUserWithRoleAsync()
         {
-            throw new NotImplementedException();
-        }
+            var allUsers = await userManager.Users.ToListAsync();
+            if (allUsers is null)
+                return null;
 
-        public Task<IEnumerable<GetRoleDTO>> GetRoleAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<GetUserWithRolesDTO>> GetUserWithRoleAsync()
-        {
-            throw new NotImplementedException();
+            var List = new List<GetUserWithRolesDTO>();
+            foreach(var user in allUsers) 
+            {
+                var getUserRole = (await userManager.GetRolesAsync(user)).FirstOrDefault();
+                var getRoleInfo = await roleManager.Roles.FirstOrDefaultAsync(r  => r.Name.ToLower() == getUserRole.ToLower());
+                List.Add(new GetUserWithRolesDTO() 
+                {
+                    Name = user.Name,
+                    Email = user.Email,
+                    RoleId = getRoleInfo.Id,
+                    RoleName = getRoleInfo.Name
+                });
+            }
+            return List;
         }
 
         public async Task<LoginResponse> LoginAcoountAsync(LoginDto model)
@@ -200,7 +222,18 @@ namespace Infrastructure.Repos
 
         public async Task<LoginResponse> RefreshTokenAsync(RefreshTokenDTO model)
         {
-            throw new NotImplementedException();
+            var token = await context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == model.Token);
+            if (token == null)
+                return new LoginResponse();
+
+            var user = await userManager.FindByIdAsync(token.UserID);
+            string newToken = await GenerateToken(user);
+            string newRefreshToken = GenerateRefreshToken();
+            var saveResult = await SaveRefreshToken(user.Id, newToken);
+            if (saveResult.Flag)
+                return new LoginResponse(true, $"{user.Name} Successfully re-logged in", newToken, newRefreshToken);
+            else
+                return new LoginResponse();
         }
 
         public async Task<GeneralResponse> SaveRefreshToken(string userId, string token)
@@ -223,5 +256,29 @@ namespace Infrastructure.Repos
             }
 
         }
+
+        public async Task<GeneralResponse> ChangeUserRoleAsync(ChangeUserRoleRequestDTO model)
+        {
+            if (await FindRoleByNameAsync(model.RoleName) is null)
+                return new GeneralResponse(false, "Role not found");
+
+            if (await FindUserByEmailAsync(model.UserEmail) is null) 
+                return new GeneralResponse(false, "User not found");
+
+            var user = await FindUserByEmailAsync(model.UserEmail);
+            var previousRole = (await userManager.GetRolesAsync(user)).FirstOrDefault();
+            var removeOldRole = await userManager.RemoveFromRoleAsync(user, previousRole);
+            var error = CheckResponse(removeOldRole);
+            if (!string.IsNullOrEmpty(error))
+                return new GeneralResponse(false, error);
+
+            var result = await userManager.AddToRoleAsync(user, model.RoleName);
+            var response = CheckResponse(result);
+            if (!string.IsNullOrEmpty(error))
+                return new GeneralResponse(false, response);
+            else
+                return new GeneralResponse(true, "Role Changed");
+        }
+
     }
 }
