@@ -1,5 +1,7 @@
-﻿using Domain.Entities.Authentication;
+﻿using Application.Interfaces;
+using Domain.Entities.Authentication;
 using Infrastructure.DataContext;
+using Infrastructure.Repos;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +23,7 @@ namespace Infrastructure
             
             services.AddAuthentication();
             services.AddAuthorization();
+            services.AddScoped<IAccount, AccountRepository>();
             return services;
         }
 
