@@ -13,5 +13,12 @@ namespace Application.Extensions
             public const string Admin = "Admin";
             public const string User = "User";
         }
+
+        public static class Admin 
+        {
+            public const string Name = "Admin";
+            public const string Email = "Admin@Admin.com";
+            public const string Password = "Admin@123";
+        }
     }
 }

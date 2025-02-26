@@ -71,8 +71,11 @@ namespace WebApi.Controllers
         [HttpPost("/setting")]
         public async Task<ActionResult> CreateAdmin()
         {
-            await account.CreateAdmin();
-            return Ok();
+            var response = await account.CreateAdmin();
+            if (!response.Flag)
+                return BadRequest(response);
+
+            return Ok(response);
         }
 
         [HttpGet("identify/users-with-roles")]

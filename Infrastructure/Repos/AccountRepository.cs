@@ -92,21 +92,30 @@ namespace Infrastructure.Repos
                 return new GeneralResponse(true, $"{user.Name} assigned to {role.Name} role.");
         } 
 
-        public async Task CreateAdmin()
+        public async Task<GeneralResponse> CreateAdmin()
         {
             try 
             {
-                if ((await FindRoleByNameAsync(Constant.Role.Admin)) != null) return;
+                if ((await FindRoleByNameAsync(Constant.Role.Admin)) != null)
+                        return new GeneralResponse(false, "Can not set the application, something is missing.");
+
+                if (await FindUserByEmailAsync(Constant.Admin.Email) != null)
+                    return new GeneralResponse(false, "setting has already set before!");
+
                 var admin = new CreateAccountDTO()
                 {
-                    Name = "Admin",
-                    Password = "Admin@123",
-                    EmailAddress = "admin@admin.com",
+                    Name = Constant.Admin.Name,
+                    Password = Constant.Admin.Password,
+                    EmailAddress = Constant.Admin.Email,
                     Role = Constant.Role.Admin
                 };
                 await CreateAccountAsync(admin);
+                return new GeneralResponse(true, "setting saved successfully");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                return new GeneralResponse(false, ex.Message);
+            }
         }
 
         public async Task<GeneralResponse> CreateAccountAsync(CreateAccountDTO model)

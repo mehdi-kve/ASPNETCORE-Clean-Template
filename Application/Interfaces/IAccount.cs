@@ -11,7 +11,7 @@ namespace Application.Interfaces
 {
     public interface IAccount
     {
-        Task CreateAdmin();
+        Task<GeneralResponse> CreateAdmin();
 
         Task<GeneralResponse> CreateAccountAsync(CreateAccountDTO model);
 
