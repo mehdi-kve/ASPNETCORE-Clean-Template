@@ -11,15 +11,16 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Mapster;
 using Application.Extensions;
 using Infrastructure.DataContext;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace Infrastructure.Repos
 {
     public class AccountRepository
-        (RoleManager<IdentityRole> roleManager,
+        (IMapper _mapper,
+         RoleManager<IdentityRole> roleManager,
          UserManager<ApplicationUser> userManager,IConfiguration config,
          SignInManager<ApplicationUser> signInManager, ApplicationDbContext context) : IAccount
     {
@@ -29,8 +30,14 @@ namespace Infrastructure.Repos
         private async Task<IdentityRole> FindRoleByNameAsync(string roleName)
             => await roleManager.FindByNameAsync(roleName);
 
+        /*public async Task<IEnumerable<GetRoleDTO>> GetRoleAsync()
+            => (await roleManager.Roles.ToListAsync()).Adapt<IEnumerable<GetRoleDTO>>();*/
+
         public async Task<IEnumerable<GetRoleDTO>> GetRoleAsync()
-            => (await roleManager.Roles.ToListAsync()).Adapt<IEnumerable<GetRoleDTO>>();
+        {
+            var roles = await roleManager.Roles.ToListAsync();
+            return _mapper.Map<IEnumerable<GetRoleDTO>>(roles);
+        }
 
         private static string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
@@ -40,6 +47,8 @@ namespace Infrastructure.Repos
             {
                 var securitykey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
                 var credential = new SigningCredentials(securitykey, SecurityAlgorithms.HmacSha256);
+
+                var roles = await userManager.GetRolesAsync(user);
 
                 var userClaims = new[]
                 {
@@ -79,8 +88,12 @@ namespace Infrastructure.Repos
                 return new GeneralResponse(false, "Model State cannot be empty");
 
             var roleExist = await FindRoleByNameAsync(role.Name);
-            if (roleExist == null)
-                await CreateRoleAsync(role.Adapt(new CreateRoleDTO()));
+
+            if (roleExist == null) 
+            {
+                var roleDto = _mapper.Map<CreateRoleDTO>(role);
+                await CreateRoleAsync(roleDto);
+            }
 
             IdentityResult result = await userManager.AddToRolesAsync(user, new List<string> {role.Name});
 
@@ -97,10 +110,7 @@ namespace Infrastructure.Repos
             try 
             {
                 if ((await FindRoleByNameAsync(Constant.Role.Admin)) != null)
-                        return new GeneralResponse(false, "Can not set the application, something is missing.");
-
-                if (await FindUserByEmailAsync(Constant.Admin.Email) != null)
-                    return new GeneralResponse(false, "setting has already set before!");
+                        return new GeneralResponse(false, "setting has already set before!");
 
                 var admin = new CreateAccountDTO()
                 {
@@ -150,11 +160,11 @@ namespace Infrastructure.Repos
 
         public async Task<GeneralResponse> CreateRoleAsync(CreateRoleDTO model)
         {
-            var existingRole = await roleManager.FindByNameAsync(model.RoleName);
+            var existingRole = await roleManager.FindByNameAsync(model.Name);
             if (existingRole != null)
                 return new GeneralResponse(false, "Role already exists");
 
-            var newRole = new IdentityRole { Name = model.RoleName };
+            var newRole = new IdentityRole { Name = model.Name };
             var result = await roleManager.CreateAsync(newRole);
             var response = CheckResponse(result);
 

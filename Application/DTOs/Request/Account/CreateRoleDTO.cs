@@ -11,6 +11,6 @@ namespace Application.DTOs.Request.Account
     {
         [Required(ErrorMessage = "Role name is required")]
         [StringLength(50, ErrorMessage = "Role name must be between 2 and 50 characters", MinimumLength = 2)]
-        public string RoleName { get; set; }
+        public string Name { get; set; }
     }
 }

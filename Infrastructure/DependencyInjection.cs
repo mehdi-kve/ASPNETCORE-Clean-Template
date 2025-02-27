@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.Extensions;
+using Application.Interfaces;
 using Domain.Entities.Authentication;
 using Infrastructure.DataContext;
 using Infrastructure.Repos;
@@ -18,6 +19,7 @@ namespace Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             services
+                .AddAutoMapper(typeof(MappingProfile))
                 .AddDataContext(configuration)
                 .AddJwtAuthentication(configuration); 
             
